@@ -6,19 +6,22 @@ import { ResponseError } from '../../types/ReponseError';
 import { Movie } from '../../types/Movie';
 import { MovieCard } from '../MovieCard';
 
-export const FindMovie: React.FC = () => {
+type Props = {
+  onAdd: (movie: Movie) => void;
+};
+
+export const FindMovie: React.FC<Props> = ({ onAdd }) => {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewMovie, setPreviewMovie] = useState<Movie | null>(null);
-  const [movies, setMovies] = useState<Movie[]>([]);
 
   const normalizeMovie = (data: MovieData): Movie => {
     return {
       imdbId: data.imdbID,
       title: data.Title,
       description: data.Plot,
-      imdbUrl: `https://www.imdb.com/title/${data.imdbID}/`,
+      imdbUrl: `https://www.imdb.com/title/${data.imdbID}`,
       imgUrl:
         data.Poster === 'N/A'
           ? 'https://via.placeholder.com/360x270.png?text=no%20preview'
@@ -34,10 +37,12 @@ export const FindMovie: React.FC = () => {
       .then((result: MovieData | ResponseError) => {
         if ('Response' in result && result.Response === 'False') {
           setErrorMessage('There is not such a movie title');
+          setPreviewMovie(null);
         } else {
           const normalized = normalizeMovie(result as MovieData);
 
           setPreviewMovie(normalized);
+          setErrorMessage('');
         }
       })
       .finally(() => {
@@ -50,16 +55,10 @@ export const FindMovie: React.FC = () => {
       return;
     }
 
-    const alreadyInList = movies.some(
-      movie => movie.imdbId === previewMovie.imdbId,
-    );
-
-    if (!alreadyInList) {
-      setMovies(prev => [...prev, previewMovie]);
-    }
-
+    onAdd(previewMovie);
     setQuery('');
     setPreviewMovie(null);
+    setErrorMessage('');
   };
 
   return (
@@ -79,6 +78,7 @@ export const FindMovie: React.FC = () => {
               onChange={e => {
                 setQuery(e.target.value);
                 setErrorMessage('');
+                setPreviewMovie(null);
               }}
               placeholder="Enter a title to search"
               className={`input ${errorMessage ? 'is-danger' : ''}`}
@@ -98,7 +98,7 @@ export const FindMovie: React.FC = () => {
               data-cy="searchButton"
               type="submit"
               disabled={query === ''}
-              className={`button is-light${loading ? 'is-loading' : ''}`}
+              className={`button is-light ${loading ? 'is-loading' : ''}`}
             >
               Find a movie
             </button>
@@ -118,10 +118,12 @@ export const FindMovie: React.FC = () => {
         </div>
       </form>
 
-      <div className="container" data-cy="previewContainer">
-        <h2 className="title">Preview</h2>
-        {previewMovie && <MovieCard movie={previewMovie} />}
-      </div>
+      {previewMovie && (
+        <div className="container" data-cy="previewContainer">
+          <h2 className="title">Preview</h2>
+          <MovieCard movie={previewMovie} />
+        </div>
+      )}
     </>
   );
 };
